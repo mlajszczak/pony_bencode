@@ -1,4 +1,7 @@
 use "collections"
+use "files"
+use "json"
+use "debug"
 
 class val _Token is Equatable[_Token]
   let _token: (U8 | None)
@@ -43,6 +46,7 @@ class val _Token is Equatable[_Token]
   fun get_char(): U8 ? =>
     _token as U8
 
+
 class BencodeDoc
   """
   Top level bencode type containing an entire document.
@@ -65,12 +69,41 @@ class BencodeDoc
     """
     match data
     | let data': box->BencodeType =>
-      let buf = _BencodePrint._string(data', recover String(256) end)
+      let buf = _BencodeUtils._string(data', recover String(256) end)
       buf.compact()
       buf
     else
       ""
     end
+
+  fun to_json(): JsonDoc iso^ =>
+    """
+    Convert to json
+    """
+    let json_data = match data
+    | let data': this->BencodeType => _BencodeUtils._to_json(data')
+    end
+
+    let doc = recover JsonDoc end
+
+    doc.data = consume json_data
+    doc
+
+  fun ref parse_file(file_path: FilePath) ? =>
+    """
+    Parse the given bencoded file, building a document.
+    Raise error on invalid bencode in given source.
+    """
+    let file = File(file_path)
+    let content: String = file.read_string(file.size())
+
+    match file.errno()
+    | FileOK => None
+    else
+      error
+    end
+
+    parse(content)
 
   fun ref parse(source: String) ? =>
     """

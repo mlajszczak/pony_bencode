@@ -1,7 +1,9 @@
-primitive _BencodePrint
+use "json"
+
+primitive _BencodeUtils
   fun _string(data: box->BencodeType, buf': String iso): String iso^ =>
     """
-    Generate string representation of the given data.
+    Generate string representation of the given data
     """
     var buf = consume buf'
 
@@ -24,3 +26,14 @@ primitive _BencodePrint
     end
 
     buf
+
+  fun _to_json(data: box->BencodeType): (None | I64 | String | JsonArray iso^ | JsonObject iso^) =>
+    """
+    Convert the given data to json
+    """
+    match data
+    | let data': I64 => data'
+    | let data': String => data'
+    | let data': box->BencodeDict => data'.to_json()
+    | let data': box->BencodeList => data'.to_json()
+    end

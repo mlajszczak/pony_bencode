@@ -1,9 +1,11 @@
 use "collections"
+use "json"
 
 type BencodeType is (I64 | String | BencodeList | BencodeDict)
   """
   All bencode data types.
   """
+
 
 class BencodeList
   var data: Array[BencodeType]
@@ -22,13 +24,25 @@ class BencodeList
     buf.compact()
     buf
 
+  fun to_json(): JsonArray iso^ =>
+    """
+    Convert to json
+    """
+    let array: Array[JsonType] iso = recover Array[JsonType] end
+
+    for v in data.values() do
+      array.push(_BencodeUtils._to_json(v))
+    end
+
+    recover JsonArray.from_array(consume array) end
+
   fun _show(buf': String iso): String iso^ =>
     var buf = consume buf'
 
     buf.push('l')
 
     for v in data.values() do
-      buf = _BencodePrint._string(v, consume buf)
+      buf = _BencodeUtils._string(v, consume buf)
     end
 
     buf.push('e')
@@ -52,6 +66,18 @@ class BencodeDict
     buf.compact()
     buf
 
+  fun to_json(): JsonObject iso^ =>
+    """
+    Convert to json
+    """
+    let map = recover Map[String, JsonType] end
+
+    for (k, v) in data.pairs() do
+      map(k) = _BencodeUtils._to_json(v)
+    end
+
+    recover JsonObject.from_map(consume map) end
+
   fun _show(buf': String iso): String iso^ =>
     var buf = consume buf'
 
@@ -66,8 +92,8 @@ class BencodeDict
 
     for key in keys.values() do
       let value = data.get_or_else(key, 0)
-      buf = _BencodePrint._string(key, consume buf)
-      buf = _BencodePrint._string(value, consume buf)
+      buf = _BencodeUtils._string(key, consume buf)
+      buf = _BencodeUtils._string(value, consume buf)
     end
 
     buf.push('e')
