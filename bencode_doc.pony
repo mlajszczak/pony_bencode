@@ -28,13 +28,6 @@ class val _Token is Equatable[_Token]
       end
     end
 
-  fun is_char(): Bool =>
-    match _token
-    | None => false
-    else
-      true
-    end
-
   fun is_digit(): Bool =>
     match _token
     | let c: U8 =>
@@ -129,10 +122,10 @@ class BencodeDoc
       error
     end
 
-  fun ref _parse_decimal(): I64 ? =>
+  fun ref _parse_natural(): I64 ? =>
     var value: I64 = 0
 
-    while _peek_token().is_char() and _peek_token().is_digit() do
+    while _peek_token().is_digit() do
       value = (value * 10) + (_peek_token().get_char() - '0').i64()
       _consume_token()
     else
@@ -151,7 +144,7 @@ class BencodeDoc
       _consume_token()
     end
 
-    let int = _parse_decimal()
+    let int = _parse_natural()
 
     if _consume_token() != _Token('e') then
       error
@@ -160,7 +153,7 @@ class BencodeDoc
     if minus then -int else int end
 
   fun ref _parse_string(): String ? =>
-    let length = _parse_decimal()
+    let length = _parse_natural()
 
     if _consume_token() != _Token(':') then
       error
@@ -170,13 +163,9 @@ class BencodeDoc
 
     var i = length
     while i > 0 do
-      if _peek_token().is_char() then
-          buf.push(_peek_token().get_char())
-          _consume_token()
-          i = i - 1
-      else
-        error
-      end
+      buf.push(_peek_token().get_char())
+      _consume_token()
+      i = i - 1
     end
 
     buf
@@ -186,14 +175,11 @@ class BencodeDoc
 
     let dict = Map[String, BencodeType]
 
-    while true do
-      if _peek_token() == _Token('e') then
-        _consume_token()
-        break
-      end
+    while _peek_token() != _Token('e') do
       let key = _parse_string()
       dict.update(key, _parse_value())
     end
+    _consume_token()
 
     BencodeDict.from_map(dict)
 
@@ -202,20 +188,16 @@ class BencodeDoc
 
     let array = Array[BencodeType]
 
-    while true do
-      if _peek_token() == _Token('e') then
-        _consume_token()
-        break
-      end
+    while _peek_token() != _Token('e') do
       array.push(_parse_value())
     end
+    _consume_token()
 
     BencodeList.from_array(array)
 
   fun _peek_token(): _Token =>
     try
-      let c = _source(_index)
-      _Token(c)
+      _Token(_source(_index))
     else
       _Token.eof()
     end
